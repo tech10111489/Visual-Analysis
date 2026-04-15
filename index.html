@@ -10,10 +10,9 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-app.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-auth.js";
 
-        /** * [수행비서실 긴급 보고]
-         * 회장님, 현재 구글 로그인은 성공했으나 분석 엔진이 작동하지 않는 것은 'AI 사용권(API Key)'이 입력되지 않았기 때문입니다.
-         * 깃허브에서 직접 사용하시려면 아래 apiKey 자리에 발급받으신 키를 넣어주셔야 합니다.
-         * 만약 키 없이 바로 테스트하시려면 이 화면 우측의 'Preview'를 활용해 주십시오.
+        /** * [수행비서실 최종 보고]
+         * 회장님, 요청하신 파이어베이스 설정값과 Gemini API 키를 모두 반영하였습니다.
+         * 이제 이 파일을 깃허브에 올리시면 구글 로그인 후 즉시 분석이 가능합니다.
          */
         const firebaseConfig = {
             apiKey: "AIzaSyDbwkCphrmNglt9wEpqm1hA257Nq9u6DvM",
@@ -25,8 +24,8 @@
             measurementId: "G-L24XT1F4BW"
         };
 
-        // 제미나이 AI API 키 (Canvas Preview에서는 자동 주입, 외부에서는 수동 입력 필요)
-        const apiKey = ""; 
+        // 회장님께서 제공해주신 Gemini AI API 키를 적용했습니다.
+        const apiKey = "AIzaSyBibl0I4VGCE2mGHKTt53eMBu4TX2ji5Yc"; 
 
         // --- 시스템 핵심 로직 ---
         let auth;
@@ -121,7 +120,8 @@
         window.startAnalysis = async () => {
             if (!selectedBase64) return;
             
-            if (apiKey === "AIzaSyBibl0I4VGCE2mGHKTt53eMBu4TX2ji5Yc") {
+            // 키가 비어있거나 임시 문구일 경우에만 모달 표시
+            if (apiKey === "" || apiKey.includes("YOUR_")) {
                 const modal = document.createElement('div');
                 modal.className = "fixed inset-0 bg-black/80 flex items-center justify-center z-[100] p-6";
                 modal.innerHTML = `
@@ -130,7 +130,7 @@
                             <i data-lucide="alert-triangle"></i>
                         </div>
                         <h4 class="text-xl font-bold">API 키 미설정</h4>
-                        <p class="text-stone-500 text-sm leading-relaxed">회장님, 현재 AI 분석 엔진을 가동하기 위한 열쇠가 비어있습니다. 우측 'Preview' 버튼을 이용하시거나, 코드 상단의 apiKey를 입력해 주십시오.</p>
+                        <p class="text-stone-500 text-sm leading-relaxed">회장님, 현재 AI 분석 엔진을 가동하기 위한 열쇠가 비어있습니다. 코드 상단의 apiKey를 확인해 주십시오.</p>
                         <button onclick="this.parentElement.parentElement.remove()" class="w-full bg-black text-white py-4 rounded-xl font-bold">확인</button>
                     </div>
                 `;
