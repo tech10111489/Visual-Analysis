@@ -3,277 +3,295 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>퍼스널 컬러 진단 시스템</title>
+    <title>프리미엄 퍼스널 컬러 분석 시스템</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Noto+Serif+KR:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
         body {
             font-family: 'Noto Sans KR', sans-serif;
-            background-color: #fdfbfb;
+            background-color: #faf9f7; /* 고급스러운 베이지톤 배경 */
+            color: #333333;
+        }
+        .font-serif {
+            font-family: 'Noto Serif KR', serif;
         }
         .hidden { display: none !important; }
+        
+        /* 프리미엄 스캐닝 애니메이션 */
+        .scan-container {
+            position: relative;
+            overflow: hidden;
+            border-radius: 0.5rem;
+        }
+        .scan-line {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: rgba(212, 175, 55, 0.8); /* 골드 색상 */
+            box-shadow: 0 0 10px rgba(212, 175, 55, 0.5);
+            animation: scan 2s cubic-bezier(0.4, 0, 0.2, 1) infinite alternate;
+            z-index: 10;
+        }
+        @keyframes scan {
+            0% { top: 0%; }
+            100% { top: 100%; }
+        }
+        
+        /* 럭셔리 버튼 스타일 */
+        .btn-gold {
+            background: linear-gradient(135deg, #D4AF37 0%, #AA8222 100%);
+            color: white;
+            transition: all 0.3s ease;
+        }
+        .btn-gold:hover {
+            box-shadow: 0 4px 15px rgba(212, 175, 55, 0.4);
+            transform: translateY(-1px);
+        }
+        
+        /* 컬러 팔레트 스와치 */
+        .color-swatch {
+            width: 40px; height: 40px;
+            border-radius: 50%;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            border: 1px solid #eee;
+        }
     </style>
 </head>
-<body class="text-gray-800 antialiased min-h-screen flex items-center justify-center p-4">
+<body class="antialiased min-h-screen flex items-center justify-center p-4">
 
     <!-- 메인 컨테이너 -->
-    <div id="app-container" class="w-full max-w-md bg-white rounded-2xl shadow-xl overflow-hidden relative">
+    <div id="app-container" class="w-full max-w-lg bg-white rounded-none shadow-2xl overflow-hidden relative border border-gray-100">
         
         <!-- 로딩 오버레이 -->
-        <div id="loading-overlay" class="absolute inset-0 bg-white/80 z-50 flex items-center justify-center hidden">
-            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-pink-500"></div>
+        <div id="loading-overlay" class="absolute inset-0 bg-white/90 z-50 flex flex-col items-center justify-center hidden">
+            <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-[#D4AF37] mb-4"></div>
+            <p class="font-serif text-[#D4AF37] tracking-widest text-sm">ANALYZING...</p>
         </div>
 
-        <!-- 1. 로그인 화면 -->
-        <div id="login-screen" class="p-8 flex flex-col items-center justify-center min-h-[400px]">
-            <div class="w-16 h-16 bg-pink-100 rounded-full flex items-center justify-center mb-6">
-                <svg class="w-8 h-8 text-pink-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"></path></svg>
-            </div>
-            <h1 class="text-2xl font-bold text-gray-800 mb-2">퍼스널 컬러 진단</h1>
-            <p class="text-sm text-gray-500 mb-8 text-center">피부미용과 학생들을 위한 시각 분석 시스템입니다.<br>구글 계정으로 로그인해주세요.</p>
-            
-            <button id="btn-google-login" class="w-full flex items-center justify-center gap-3 bg-white border border-gray-300 rounded-lg px-4 py-3 text-gray-700 font-medium hover:bg-gray-50 transition-colors shadow-sm">
-                <svg class="w-5 h-5" viewBox="0 0 24 24">
-                    <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-                    <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-                    <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
-                    <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-                </svg>
-                Google 계정으로 시작하기
-            </button>
-            <div id="login-error" class="text-red-600 text-sm mt-4 hidden text-center bg-red-50 p-3 rounded-lg border border-red-200"></div>
-        </div>
-
-        <!-- 2. 진단 화면 (로그인 후) -->
-        <div id="main-screen" class="hidden flex flex-col min-h-[500px]">
-            <div class="bg-pink-50 px-6 py-4 border-b border-pink-100 flex justify-between items-center">
+        <!-- 메인 분석 화면 (기본 화면으로 변경) -->
+        <div id="main-screen" class="flex flex-col min-h-[600px]">
+            <div class="px-8 py-5 border-b border-gray-100 flex justify-between items-center bg-white">
                 <div>
-                    <p class="text-xs text-pink-500 font-bold tracking-wider">VISUAL ANALYSIS</p>
-                    <p class="text-sm font-medium text-gray-700">환영합니다, <span id="user-name" class="font-bold"></span>님</p>
+                    <p class="text-[10px] text-[#D4AF37] font-bold tracking-widest">VISUAL ANALYSIS</p>
+                    <p class="text-sm font-serif text-gray-800 mt-1">프리미엄 퍼스널 컬러 진단</p>
                 </div>
-                <button id="btn-logout" class="text-xs text-gray-500 hover:text-gray-800 underline">로그아웃</button>
             </div>
 
-            <div class="p-6 flex-grow">
-                <!-- 질문 컨테이너 -->
-                <div id="quiz-container">
-                    <div class="mb-6">
-                        <span class="text-xs font-bold text-gray-400 bg-gray-100 px-2 py-1 rounded">질문 <span id="q-num">1</span>/3</span>
-                        <h2 id="q-title" class="text-xl font-bold text-gray-800 mt-3 mb-6">평소 잘 어울린다고 듣는 액세서리 컬러는 무엇인가요?</h2>
+            <div class="p-8 flex-grow bg-[#faf9f7] flex flex-col">
+                
+                <!-- 이미지 업로드 섹션 -->
+                <div id="upload-container" class="flex-grow flex flex-col justify-center">
+                    <div class="text-center mb-8">
+                        <h2 class="text-2xl font-serif text-gray-800 mb-2">Face Analysis</h2>
+                        <p class="text-sm text-gray-500 font-light">정면에서 촬영된, 조명이 밝고 그림자가 없는<br>얼굴 사진을 업로드해 주십시오.</p>
                     </div>
-                    <div class="space-y-3">
-                        <button class="answer-btn w-full text-left p-4 rounded-xl border border-gray-200 hover:border-pink-400 hover:bg-pink-50 transition-all focus:outline-none" data-type="warm">
-                            골드 (Gold) 제품이 잘 어울립니다.
-                        </button>
-                        <button class="answer-btn w-full text-left p-4 rounded-xl border border-gray-200 hover:border-pink-400 hover:bg-pink-50 transition-all focus:outline-none" data-type="cool">
-                            실버 (Silver) 제품이 잘 어울립니다.
-                        </button>
+
+                    <div class="relative w-full h-64 border-2 border-dashed border-[#D4AF37] border-opacity-40 bg-white flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 transition-colors group" id="drop-zone">
+                        <input type="file" id="image-upload" accept="image/*" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20">
+                        <svg class="w-10 h-10 text-[#D4AF37] opacity-60 mb-3 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                        <p class="text-sm text-gray-600 font-medium tracking-wide">사진 업로드 (Click or Drag)</p>
+                        <p class="text-xs text-gray-400 mt-1">고해상도 이미지 권장</p>
+                    </div>
+                </div>
+
+                <!-- 분석 중 화면 (스캐닝) -->
+                <div id="scanning-container" class="hidden flex-grow flex flex-col items-center justify-center">
+                    <div class="text-center mb-6">
+                        <h2 class="text-xl font-serif text-gray-800">피부톤 데이터 추출 중</h2>
+                        <p class="text-xs text-gray-400 tracking-widest mt-2">EXTRACTING PIXEL DATA</p>
+                    </div>
+                    <div class="scan-container w-48 h-48 bg-gray-200 border border-gray-300">
+                        <img id="preview-image" class="w-full h-full object-cover opacity-70 grayscale">
+                        <div class="scan-line"></div>
                     </div>
                 </div>
 
                 <!-- 결과 컨테이너 -->
-                <div id="result-container" class="hidden text-center">
-                    <h2 class="text-lg font-medium text-gray-500 mb-1">진단 결과</h2>
-                    <div id="result-color-box" class="w-24 h-24 mx-auto rounded-full shadow-inner mb-4 mt-2"></div>
-                    <h1 id="result-title" class="text-3xl font-bold text-gray-800 mb-2"></h1>
-                    <p id="result-desc" class="text-sm text-gray-600 mb-8 leading-relaxed"></p>
-                    <button id="btn-restart" class="w-full bg-pink-500 hover:bg-pink-600 text-white font-medium py-3 rounded-lg transition-colors shadow-md">다시 진단하기</button>
+                <div id="result-container" class="hidden flex-col items-center text-center pb-4">
+                    <p class="text-xs text-[#D4AF37] tracking-[0.2em] font-bold mb-2">ANALYSIS COMPLETE</p>
+                    <h1 id="result-title" class="text-3xl font-serif text-gray-900 mb-6"></h1>
+                    
+                    <!-- 추출된 피부톤 -->
+                    <div class="mb-8 w-full bg-white p-5 shadow-sm border border-gray-100 flex items-center justify-between">
+                        <div class="text-left">
+                            <p class="text-[10px] text-gray-400 tracking-wider mb-1">EXTRACTED SKIN TONE</p>
+                            <p id="skin-rgb-text" class="text-sm font-mono text-gray-700"></p>
+                        </div>
+                        <div id="extracted-color-box" class="w-12 h-12 rounded-full shadow-inner border border-gray-200"></div>
+                    </div>
+
+                    <p id="result-desc" class="text-sm text-gray-600 mb-8 leading-relaxed px-2 text-justify"></p>
+                    
+                    <div class="w-full mb-8">
+                        <p class="text-xs text-gray-500 font-serif tracking-widest mb-4 border-b border-gray-200 pb-2">RECOMMENDED PALETTE</p>
+                        <div id="palette-container" class="flex justify-center gap-4">
+                            <!-- 컬러 팔레트 동적 생성 -->
+                        </div>
+                    </div>
+
+                    <button id="btn-restart" class="w-full btn-gold py-4 text-sm tracking-widest font-bold">새로운 이미지 분석하기</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <script type="module">
-        // Firebase 설정 (전달해주신 값)
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    <!-- 픽셀 데이터 추출용 숨김 캔버스 -->
+    <canvas id="analysis-canvas" class="hidden"></canvas>
 
-        const firebaseConfig = {
-            apiKey: "AIzaSyDbwkCphrmNglt9wEpqm1hA257Nq9u6DvM",
-            authDomain: "visual-analysis-15610.firebaseapp.com",
-            projectId: "visual-analysis-15610",
-            storageBucket: "visual-analysis-15610.firebasestorage.app",
-            messagingSenderId: "1030724023702",
-            appId: "1:1030724023702:web:7ef935a26f8dbcba1c99b7",
-            measurementId: "G-L24XT1F4BW"
+    <script type="module">
+        // 분석 요소
+        const uploadContainer = document.getElementById('upload-container');
+        const scanningContainer = document.getElementById('scanning-container');
+        const resultContainer = document.getElementById('result-container');
+        const imageUpload = document.getElementById('image-upload');
+        const previewImage = document.getElementById('preview-image');
+        const analysisCanvas = document.getElementById('analysis-canvas');
+        const ctx = analysisCanvas.getContext('2d', { willReadFrequently: true });
+
+        // 결과 요소
+        const resultTitle = document.getElementById('result-title');
+        const resultDesc = document.getElementById('result-desc');
+        const skinRgbText = document.getElementById('skin-rgb-text');
+        const extractedColorBox = document.getElementById('extracted-color-box');
+        const paletteContainer = document.getElementById('palette-container');
+
+        // 퍼스널 컬러 데이터베이스
+        const colorData = {
+            spring: {
+                title: "Spring Warm (봄 웜톤)",
+                desc: "추출된 픽셀 데이터를 분석한 결과, 옐로우 베이스의 명도와 채도가 높은 '봄 웜톤' 속성이 가장 강하게 나타납니다. 생기 있고 화사한 이미지를 연출할 수 있으며, 코랄, 피치, 라이트 옐로우 계열의 색상이 피부톤을 가장 고급스럽게 밝혀줍니다.",
+                colors: ["#FF7F50", "#FFCBA4", "#FAD6A5", "#E6C200"] // 코랄, 피치, 살구, 웜옐로우
+            },
+            summer: {
+                title: "Summer Cool (여름 쿨톤)",
+                desc: "추출된 픽셀 데이터를 분석한 결과, 블루/핑크 베이스의 명도가 높고 대비가 적은 '여름 쿨톤' 속성이 지배적입니다. 청량하고 우아한 분위기를 지니셨으며, 라벤더, 스카이블루, 파스텔 핑크 계열의 은은한 색상이 최적의 조화를 이룹니다.",
+                colors: ["#E6E6FA", "#87CEEB", "#FFD1DC", "#98FF98"] // 라벤더, 스카이블루, 파스텔핑크, 파스텔민트
+            },
+            autumn: {
+                title: "Autumn Warm (가을 웜톤)",
+                desc: "추출된 픽셀 데이터를 분석한 결과, 옐로우 베이스의 명도가 낮고 깊이감 있는 '가을 웜톤' 속성이 확인되었습니다. 성숙하고 차분하며 고급스러운 이미지가 강점이며, 브라운, 카키, 머스타드 계열의 음영 색상이 우아함을 극대화합니다.",
+                colors: ["#8B4513", "#BDB76B", "#D2B48C", "#CC7722"] // 새들브라운, 다크카키, 탄, 오크
+            },
+            winter: {
+                title: "Winter Cool (겨울 쿨톤)",
+                desc: "추출된 픽셀 데이터를 분석한 결과, 블루 베이스의 명도 대비가 뚜렷한 '겨울 쿨톤' 속성이 강하게 검출되었습니다. 도시적이고 세련된 카리스마를 지니셨으며, 블랙, 화이트, 딥 버건디, 네이비 등 강렬하고 선명한 색상이 이목구비를 더욱 선명하게 잡아줍니다.",
+                colors: ["#000000", "#FFFFFF", "#800020", "#000080"] // 블랙, 화이트, 버건디, 네이비
+            }
         };
 
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const provider = new GoogleAuthProvider();
+        // 이미지 업로드 처리
+        imageUpload.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
 
-        // UI 요소
-        const loginScreen = document.getElementById('login-screen');
-        const mainScreen = document.getElementById('main-screen');
-        const loadingOverlay = document.getElementById('loading-overlay');
-        const btnGoogleLogin = document.getElementById('btn-google-login');
-        const btnLogout = document.getElementById('btn-logout');
-        const userNameSpan = document.getElementById('user-name');
-        const loginError = document.getElementById('login-error');
-
-        // 퍼스널 컬러 로직 요소
-        const quizContainer = document.getElementById('quiz-container');
-        const resultContainer = document.getElementById('result-container');
-        const qNum = document.getElementById('q-num');
-        const qTitle = document.getElementById('q-title');
-        const answerBtns = document.querySelectorAll('.answer-btn');
-        const btnRestart = document.getElementById('btn-restart');
-        
-        let currentQuestion = 0;
-        let score = { warm: 0, cool: 0, light: 0, dark: 0 };
-
-        const questions = [
-            {
-                title: "평소 잘 어울린다고 듣는 액세서리 컬러는 무엇인가요?",
-                answers: [
-                    { text: "골드 (Gold) 제품이 피부에 착 감깁니다.", type: "warm" },
-                    { text: "실버 (Silver) 제품이 얼굴을 환하게 해줍니다.", type: "cool" }
-                ]
-            },
-            {
-                title: "햇볕에 장시간 노출되었을 때 피부의 반응은?",
-                answers: [
-                    { text: "쉽게 타고 피부가 어두워지는 편입니다.", type: "warm" },
-                    { text: "피부가 붉어지고 잘 타지 않는 편입니다.", type: "cool" }
-                ]
-            },
-            {
-                title: "평소 선호하거나 잘 어울리는 옷의 명도(밝기)는?",
-                answers: [
-                    { text: "밝고 화사한 파스텔 톤이나 밝은 색상", type: "light" },
-                    { text: "깊이감 있는 어둡거나 선명한 원색 색상", type: "dark" }
-                ]
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const img = new Image();
+                img.onload = function() {
+                    startAnalysis(img);
+                }
+                img.src = event.target.result;
             }
-        ];
-
-        // 인증 상태 감지
-        onAuthStateChanged(auth, (user) => {
-            if (user) {
-                // 로그인 성공
-                userNameSpan.textContent = user.displayName || "학생";
-                loginScreen.classList.add('hidden');
-                mainScreen.classList.remove('hidden');
-                startQuiz();
-            } else {
-                // 로그아웃 상태
-                loginScreen.classList.remove('hidden');
-                mainScreen.classList.add('hidden');
-            }
+            reader.readAsDataURL(file);
         });
 
-        // 구글 로그인 실행
-        btnGoogleLogin.addEventListener('click', async () => {
-            loadingOverlay.classList.remove('hidden');
-            loginError.classList.add('hidden');
+        // 픽셀 분석 로직 (AI 연동 없음, HTML Canvas 방식)
+        function startAnalysis(img) {
+            uploadContainer.classList.add('hidden');
+            scanningContainer.classList.remove('hidden');
+            previewImage.src = img.src;
+
+            // 캔버스에 이미지 렌더링 후 중앙 픽셀 데이터 추출
+            analysisCanvas.width = img.width;
+            analysisCanvas.height = img.height;
+            ctx.drawImage(img, 0, 0, img.width, img.height);
+
+            // 얼굴이 주로 위치하는 중앙 영역(약 20% 크기)의 평균 RGB 계산
+            const startX = img.width * 0.4;
+            const startY = img.height * 0.4;
+            const sizeW = img.width * 0.2;
+            const sizeH = img.height * 0.2;
+
             try {
-                await signInWithPopup(auth, provider);
-            } catch (error) {
-                console.error("Login Error: ", error);
-                
-                // auth/unauthorized-domain 에러에 대한 명확한 UI 피드백 추가
-                if (error.code === 'auth/unauthorized-domain') {
-                    loginError.innerHTML = `
-                        <strong>도메인 승인 오류 발생</strong><br><br>
-                        현재 실행 중인 웹페이지 주소가 Firebase에 등록되지 않아 로그인이 차단되었습니다.<br><br>
-                        <span class="text-xs text-left block mt-2 text-gray-700 bg-white p-2 rounded border border-red-200">
-                        <strong>[해결 방법]</strong><br>
-                        1. Firebase 콘솔(console.firebase.google.com) 접속<br>
-                        2. 프로젝트(visual-analysis-15610) 선택<br>
-                        3. 왼쪽 메뉴 <strong>Authentication</strong> > <strong>설정(Settings)</strong> 탭<br>
-                        4. <strong>승인된 도메인(Authorized domains)</strong> 섹션 찾기<br>
-                        5. 현재 접속 중인 주소(예: tech10111489.github.io 또는 현재 테스트 화면의 도메인)를 추가
-                        </span>
-                    `;
-                } else {
-                    loginError.textContent = "로그인 중 오류가 발생했습니다. 팝업 차단 여부를 확인하거나 나중에 다시 시도해주세요.";
+                const imageData = ctx.getImageData(startX, startY, sizeW, sizeH);
+                const data = imageData.data;
+                let r = 0, g = 0, b = 0;
+                let count = 0;
+
+                // 4칸씩 이동 (R, G, B, A)
+                for (let i = 0; i < data.length; i += 4) {
+                    r += data[i];
+                    g += data[i+1];
+                    b += data[i+2];
+                    count++;
                 }
-                loginError.classList.remove('hidden');
-            } finally {
-                loadingOverlay.classList.add('hidden');
+
+                r = Math.floor(r / count);
+                g = Math.floor(g / count);
+                b = Math.floor(b / count);
+
+                // 스캐닝 연출을 위해 2초 대기 후 결과 도출
+                setTimeout(() => {
+                    determineColorSeason(r, g, b);
+                }, 2000);
+
+            } catch (err) {
+                alert("이미지 처리 중 오류가 발생했습니다. 다른 이미지를 사용해 주십시오.");
+                resetAnalysis();
             }
-        });
-
-        // 로그아웃 실행
-        btnLogout.addEventListener('click', async () => {
-            loadingOverlay.classList.remove('hidden');
-            await signOut(auth);
-            loadingOverlay.classList.add('hidden');
-        });
-
-        // 퀴즈 렌더링
-        function renderQuestion() {
-            const q = questions[currentQuestion];
-            qNum.textContent = currentQuestion + 1;
-            qTitle.textContent = q.title;
-            
-            answerBtns[0].textContent = q.answers[0].text;
-            answerBtns[0].dataset.type = q.answers[0].type;
-            
-            answerBtns[1].textContent = q.answers[1].text;
-            answerBtns[1].dataset.type = q.answers[1].type;
         }
 
-        // 퀴즈 답변 처리
-        answerBtns.forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const type = e.target.dataset.type;
-                score[type]++;
-                
-                currentQuestion++;
-                if (currentQuestion < questions.length) {
-                    renderQuestion();
-                } else {
-                    showResult();
-                }
-            });
-        });
-
-        // 결과 표시
-        function showResult() {
-            quizContainer.classList.add('hidden');
+        // RGB 값을 통한 톤 판별 알고리즘 (Rule-based)
+        function determineColorSeason(r, g, b) {
+            scanningContainer.classList.add('hidden');
             resultContainer.classList.remove('hidden');
-            
-            let resultTone = "";
-            let colorHex = "";
-            let description = "";
 
-            if (score.warm > score.cool) {
-                if (score.light > score.dark) {
-                    resultTone = "봄 웜톤 (Spring Warm)";
-                    colorHex = "#FDE68A"; // 피치/옐로우 톤
-                    description = "생기 있고 발랄한 이미지입니다. 코랄, 피치, 카멜 색상이 얼굴을 환하게 밝혀줍니다. 명도가 높고 채도가 높은 맑은 색상이 잘 어울립니다.";
-                } else {
-                    resultTone = "가을 웜톤 (Autumn Warm)";
-                    colorHex = "#D97706"; // 브라운/카키 톤
-                    description = "고급스럽고 차분한 이미지입니다. 카키, 브라운, 머스타드 색상이 깊이감을 더해줍니다. 차분하고 음영이 들어간 색상이 잘 어울립니다.";
-                }
+            // 피부톤 HEX 변환 및 표시
+            const hex = "#" + (1 << 24 | r << 16 | g << 8 | b).toString(16).slice(1).toUpperCase();
+            skinRgbText.textContent = `RGB(${r}, ${g}, ${b}) / ${hex}`;
+            extractedColorBox.style.backgroundColor = hex;
+
+            // 분석 로직 (단순화된 기준)
+            // 명도 (Lightness)
+            const luminance = (0.299 * r + 0.587 * g + 0.114 * b);
+            const isLight = luminance > 140; 
+            
+            // 온도 (Warm vs Cool) - Red와 Blue의 비율, Green의 관여도 기반
+            // 피부에서 R이 압도적으로 높고, B가 상대적으로 낮으면 웜톤
+            const isWarm = r > b && (g - b) > 15;
+
+            let seasonKey = "";
+            if (isWarm) {
+                seasonKey = isLight ? "spring" : "autumn";
             } else {
-                if (score.light > score.dark) {
-                    resultTone = "여름 쿨톤 (Summer Cool)";
-                    colorHex = "#A7F3D0"; // 라벤더/민트 톤
-                    description = "청량하고 맑은 이미지입니다. 파스텔 핑크, 라벤더, 스카이블루 색상이 우아함을 더해줍니다. 대비가 강하지 않은 은은한 색상이 잘 어울립니다.";
-                } else {
-                    resultTone = "겨울 쿨톤 (Winter Cool)";
-                    colorHex = "#1E3A8A"; // 딥블루/블랙 톤
-                    description = "세련되고 도시적인 이미지입니다. 블랙, 화이트, 딥 버건디 등 대비가 확실한 색상이 이목구비를 뚜렷하게 해줍니다.";
-                }
+                seasonKey = isLight ? "summer" : "winter";
             }
 
-            document.getElementById('result-title').textContent = resultTone;
-            document.getElementById('result-desc').textContent = description;
-            document.getElementById('result-color-box').style.backgroundColor = colorHex;
+            const resultData = colorData[seasonKey];
+            
+            resultTitle.textContent = resultData.title;
+            resultDesc.textContent = resultData.desc;
+            
+            // 팔레트 렌더링
+            paletteContainer.innerHTML = "";
+            resultData.colors.forEach(color => {
+                const swatch = document.createElement('div');
+                swatch.className = "color-swatch";
+                swatch.style.backgroundColor = color;
+                paletteContainer.appendChild(swatch);
+            });
         }
 
-        // 퀴즈 초기화
-        function startQuiz() {
-            currentQuestion = 0;
-            score = { warm: 0, cool: 0, light: 0, dark: 0 };
-            quizContainer.classList.remove('hidden');
+        function resetAnalysis() {
+            uploadContainer.classList.remove('hidden');
+            scanningContainer.classList.add('hidden');
             resultContainer.classList.add('hidden');
-            renderQuestion();
+            imageUpload.value = '';
         }
 
-        btnRestart.addEventListener('click', startQuiz);
+        document.getElementById('btn-restart').addEventListener('click', resetAnalysis);
 
     </script>
 </body>
