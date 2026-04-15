@@ -3,335 +3,278 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EXECUTIVE STYLING | AI Personal Color Lab</title>
+    <title>퍼스널 컬러 진단 시스템</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-app.js";
-        import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-auth.js";
-
-        /** * [수행비서실 최종 기술 보고]
-         * 회장님, 캔버스 프리뷰 환경과 깃허브 배포 환경을 지능적으로 구분하도록 설정했습니다.
-         * 이를 통해 토큰 충돌 및 도메인 오류가 원천적으로 차단됩니다.
-         */
-         
-        // 환경 판별: 프리뷰 모드(Canvas)인지 실제 배포(GitHub)인지 확인
-        const isPreviewEnvironment = typeof __firebase_config !== 'undefined';
-
-        const firebaseConfig = isPreviewEnvironment 
-            ? JSON.parse(__firebase_config) // 프리뷰용 내부 보안 설정 자동 할당
-            : {
-                // 회장님의 깃허브 배포용 개인 설정
-                apiKey: "AIzaSyDbwkCphrmNglt9wEpqm1hA257Nq9u6DvM",
-                authDomain: "visual-analysis-15610.firebaseapp.com",
-                projectId: "visual-analysis-15610",
-                storageBucket: "visual-analysis-15610.firebasestorage.app",
-                messagingSenderId: "1030724023702",
-                appId: "1:1030724023702:web:7ef935a26f8dbcba1c99b7",
-                measurementId: "G-L24XT1F4BW"
-            };
-
-        // 캔버스 환경에서는 자동 주입, 깃허브 배포 시에는 회장님의 키 사용
-        const apiKey = isPreviewEnvironment ? "" : "AIzaSyBibl0I4VGCE2mGHKTt53eMBu4TX2ji5Yc"; 
-
-        // --- 시스템 핵심 로직 ---
-        let auth;
-        const provider = new GoogleAuthProvider();
-
-        try {
-            const app = initializeApp(firebaseConfig);
-            auth = getAuth(app);
-        } catch (e) {
-            console.error("인증 시스템 초기화 오류:", e);
-        }
-
-        const loginScreen = document.getElementById('login-screen');
-        const mainScreen = document.getElementById('main-screen');
-        const userNameDisplay = document.getElementById('user-name');
-        const userPhotoDisplay = document.getElementById('user-photo');
-        let selectedBase64 = null;
-
-        window.onload = async () => {
-            lucide.createIcons();
-            
-            if (!auth) return;
-
-            // 1. 프리뷰 환경에서만 시스템 토큰을 사용하여 충돌 방지
-            const initAuth = async () => {
-                if (isPreviewEnvironment && typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                    try { 
-                        await signInWithCustomToken(auth, __initial_auth_token); 
-                    } catch(e) {
-                        console.warn("시스템 토큰 인증 스킵:", e);
-                    }
-                }
-            };
-            await initAuth();
-
-            // 2. 인증 상태 실시간 감시 및 화면 전환
-            onAuthStateChanged(auth, (user) => {
-                if (user) {
-                    showScreen('main');
-                    userNameDisplay.textContent = user.displayName || "회장님";
-                    if (user.photoURL) userPhotoDisplay.src = user.photoURL;
-                } else {
-                    showScreen('login');
-                }
-            });
-        };
-
-        function showScreen(type) {
-            if (type === 'main') {
-                loginScreen.classList.add('hidden');
-                mainScreen.classList.remove('hidden');
-            } else {
-                loginScreen.classList.remove('hidden');
-                mainScreen.classList.add('hidden');
-            }
-        }
-
-        // 구글 로그인 핸들러 (지능형 예외 처리 및 VIP 우회 접속 포함)
-        window.handleGoogleLogin = async () => {
-            if (!auth) return;
-            try {
-                await signInWithPopup(auth, provider);
-            } catch (err) {
-                console.error("로그인 상세 에러:", err);
-                
-                if (err.code === 'auth/unauthorized-domain') {
-                    // 파이어베이스 도메인 승인이 되지 않은 깃허브 환경 등을 위한 VVIP 자동 우회 접속 로직
-                    console.warn("도메인 미승인 알림: 시스템 강제 우회 접속을 시작합니다.");
-                    alert("[수행비서실 자동 조치]\n도메인 승인 절차를 생략하고 VVIP 권한으로 시스템에 즉시 진입합니다.");
-                    showScreen('main');
-                    document.getElementById('user-name').textContent = "회장님 (VVIP)";
-                } else if (isPreviewEnvironment) {
-                    alert("[비서실 안내] 프리뷰 환경이므로 임시 테스트 권한으로 시스템에 즉시 진입합니다.");
-                    showScreen('main');
-                    document.getElementById('user-name').textContent = "회장님 (Preview)";
-                } else {
-                    alert("인증 오류가 발생했습니다: " + err.message);
-                }
-            }
-        };
-
-        window.handleLogout = () => {
-            if (auth) signOut(auth).then(() => location.reload());
-        };
-
-        // 이미지 데이터 처리 및 분석 엔진 가동
-        const uploadArea = document.getElementById('upload-area');
-        const fileInput = document.getElementById('file-input');
-        const previewImg = document.getElementById('preview-img');
-        const analyzeBtn = document.getElementById('analyze-btn');
-        const resultArea = document.getElementById('result-area');
-        const loadingState = document.getElementById('loading-state');
-        const emptyState = document.getElementById('empty-state');
-
-        uploadArea?.addEventListener('click', () => fileInput.click());
-        fileInput?.addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = (event) => {
-                    selectedBase64 = event.target.result.split(',')[1];
-                    previewImg.src = event.target.result;
-                    previewImg.classList.remove('hidden');
-                    uploadArea.querySelector('.upload-placeholder').classList.add('hidden');
-                    analyzeBtn.classList.remove('hidden');
-                    resultArea.classList.add('hidden');
-                    emptyState.classList.remove('hidden');
-                };
-                reader.readAsDataURL(file);
-            }
-        });
-
-        window.startAnalysis = async () => {
-            if (!selectedBase64) return;
-
-            analyzeBtn.classList.add('hidden');
-            loadingState.classList.remove('hidden');
-            emptyState.classList.add('hidden');
-
-            const systemPrompt = `당신은 세계 최고의 퍼스널 컬러 전문가입니다. 인물의 사진을 분석하여 봄 웜/여름 쿨/가을 웜/겨울 쿨 중 하나를 진단하고 시각적인 색채 정보를 JSON으로만 답변하십시오: { "season": "결과", "summary": "요약", "bestPalette": ["#hex1", "..."], "worstPalette": ["#hex1", "..."], "advice": ["조언1", "조언2", "조언3"] }`;
-
-            const payload = {
-                contents: [{ parts: [
-                    { text: "회장님의 인상을 가장 돋보이게 할 퍼스널 컬러와 스타일링 제안을 작성하십시오." }, 
-                    { inlineData: { mimeType: "image/png", data: selectedBase64 } }
-                ] }],
-                systemInstruction: { parts: [{ text: systemPrompt }] },
-                generationConfig: { responseMimeType: "application/json", temperature: 0 }
-            };
-
-            const fetchWithRetry = async (retries = 3, delay = 1000) => {
-                try {
-                    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
-                    });
-                    if (!response.ok) throw new Error();
-                    const data = await response.json();
-                    const resultText = data.candidates[0].content.parts[0].text;
-                    renderResult(JSON.parse(resultText));
-                } catch (err) {
-                    if (retries > 0) setTimeout(() => fetchWithRetry(retries - 1, delay * 2), delay);
-                    else {
-                        alert("분석 엔진이 응답하지 않습니다. API 키 권한 혹은 네트워크를 확인해 주십시오.");
-                        analyzeBtn.classList.remove('hidden');
-                        loadingState.classList.add('hidden');
-                    }
-                }
-            };
-
-            fetchWithRetry();
-        };
-
-        function renderResult(data) {
-            loadingState.classList.add('hidden');
-            resultArea.classList.remove('hidden');
-            document.getElementById('res-season').textContent = data.season;
-            document.getElementById('res-summary').textContent = data.summary;
-            
-            const bP = document.getElementById('best-palette'); bP.innerHTML = '';
-            data.bestPalette.forEach(c => { 
-                const d = document.createElement('div'); d.className="h-16 w-16 rounded-[1.5rem] shadow-xl border border-white/20 hover:scale-110 transition-transform cursor-pointer"; d.style.backgroundColor=c; bP.appendChild(d); 
-            });
-
-            const wP = document.getElementById('worst-palette'); wP.innerHTML = '';
-            data.worstPalette.forEach(c => { 
-                const d = document.createElement('div'); d.className="h-10 w-10 rounded-xl shadow-inner opacity-50"; d.style.backgroundColor=c; wP.appendChild(d); 
-            });
-
-            const aL = document.getElementById('advice-list'); aL.innerHTML = '';
-            data.advice.forEach((t, i) => { 
-                const li = document.createElement('div'); li.className="flex gap-4 text-sm text-stone-700 bg-white/40 p-6 rounded-[2rem] border border-stone-100 shadow-sm backdrop-blur-sm"; 
-                li.innerHTML=`<div class="h-6 w-6 rounded-full bg-amber-600 text-white flex items-center justify-center text-[10px] font-bold flex-shrink-0 shadow-lg shadow-amber-600/30">${i+1}</div><p class="leading-relaxed font-medium">${t}</p>`; 
-                aL.appendChild(li); 
-            });
-        }
-    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@400;700;900&display=swap');
-        body { font-family: 'Pretendard', sans-serif; letter-spacing: -0.01em; }
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            background-color: #fdfbfb;
+        }
+        .hidden { display: none !important; }
     </style>
 </head>
-<body class="bg-[#fcfbf9] text-stone-900 antialiased overflow-x-hidden">
+<body class="text-gray-800 antialiased min-h-screen flex items-center justify-center p-4">
 
-    <!-- LOGIN SCREEN -->
-    <div id="login-screen" class="min-h-screen bg-[#0d0d0d] flex flex-col items-center justify-center p-8 text-white">
-        <div class="max-w-md w-full text-center space-y-12 animate-in fade-in duration-1000">
-            <div class="inline-block p-10 bg-amber-500 rounded-[3rem] shadow-2xl shadow-amber-500/40">
-                <i data-lucide="user-check" class="w-20 h-20 text-black"></i>
+    <!-- 메인 컨테이너 -->
+    <div id="app-container" class="w-full max-w-md bg-white rounded-2xl shadow-xl overflow-hidden relative">
+        
+        <!-- 로딩 오버레이 -->
+        <div id="loading-overlay" class="absolute inset-0 bg-white/80 z-50 flex items-center justify-center hidden">
+            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-pink-500"></div>
+        </div>
+
+        <!-- 1. 로그인 화면 -->
+        <div id="login-screen" class="p-8 flex flex-col items-center justify-center min-h-[400px]">
+            <div class="w-16 h-16 bg-pink-100 rounded-full flex items-center justify-center mb-6">
+                <svg class="w-8 h-8 text-pink-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"></path></svg>
             </div>
-            <div class="space-y-4">
-                <h1 class="text-5xl font-black italic tracking-tighter uppercase">Executive Access</h1>
-                <p class="text-stone-400 font-medium text-lg leading-relaxed">회장님, Google 인증을 통해<br>비서실 지능형 분석 시스템을 가동합니다.</p>
-            </div>
+            <h1 class="text-2xl font-bold text-gray-800 mb-2">퍼스널 컬러 진단</h1>
+            <p class="text-sm text-gray-500 mb-8 text-center">피부미용과 학생들을 위한 시각 분석 시스템입니다.<br>구글 계정으로 로그인해주세요.</p>
             
-            <button onclick="handleGoogleLogin()" class="w-full bg-white text-black py-7 rounded-[2.5rem] font-black text-2xl hover:bg-stone-200 transition-all flex items-center justify-center gap-5 group shadow-2xl active:scale-95">
-                <svg class="w-8 h-8" viewBox="0 0 48 48">
-                    <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
-                    <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
-                    <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24s.92 7.54 2.56 10.78l7.97-6.19z"/>
-                    <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+            <button id="btn-google-login" class="w-full flex items-center justify-center gap-3 bg-white border border-gray-300 rounded-lg px-4 py-3 text-gray-700 font-medium hover:bg-gray-50 transition-colors shadow-sm">
+                <svg class="w-5 h-5" viewBox="0 0 24 24">
+                    <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                    <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                    <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+                    <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
                 </svg>
-                Google 계정으로 계속하기
+                Google 계정으로 시작하기
             </button>
+            <div id="login-error" class="text-red-600 text-sm mt-4 hidden text-center bg-red-50 p-3 rounded-lg border border-red-200"></div>
+        </div>
+
+        <!-- 2. 진단 화면 (로그인 후) -->
+        <div id="main-screen" class="hidden flex flex-col min-h-[500px]">
+            <div class="bg-pink-50 px-6 py-4 border-b border-pink-100 flex justify-between items-center">
+                <div>
+                    <p class="text-xs text-pink-500 font-bold tracking-wider">VISUAL ANALYSIS</p>
+                    <p class="text-sm font-medium text-gray-700">환영합니다, <span id="user-name" class="font-bold"></span>님</p>
+                </div>
+                <button id="btn-logout" class="text-xs text-gray-500 hover:text-gray-800 underline">로그아웃</button>
+            </div>
+
+            <div class="p-6 flex-grow">
+                <!-- 질문 컨테이너 -->
+                <div id="quiz-container">
+                    <div class="mb-6">
+                        <span class="text-xs font-bold text-gray-400 bg-gray-100 px-2 py-1 rounded">질문 <span id="q-num">1</span>/3</span>
+                        <h2 id="q-title" class="text-xl font-bold text-gray-800 mt-3 mb-6">평소 잘 어울린다고 듣는 액세서리 컬러는 무엇인가요?</h2>
+                    </div>
+                    <div class="space-y-3">
+                        <button class="answer-btn w-full text-left p-4 rounded-xl border border-gray-200 hover:border-pink-400 hover:bg-pink-50 transition-all focus:outline-none" data-type="warm">
+                            골드 (Gold) 제품이 잘 어울립니다.
+                        </button>
+                        <button class="answer-btn w-full text-left p-4 rounded-xl border border-gray-200 hover:border-pink-400 hover:bg-pink-50 transition-all focus:outline-none" data-type="cool">
+                            실버 (Silver) 제품이 잘 어울립니다.
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 결과 컨테이너 -->
+                <div id="result-container" class="hidden text-center">
+                    <h2 class="text-lg font-medium text-gray-500 mb-1">진단 결과</h2>
+                    <div id="result-color-box" class="w-24 h-24 mx-auto rounded-full shadow-inner mb-4 mt-2"></div>
+                    <h1 id="result-title" class="text-3xl font-bold text-gray-800 mb-2"></h1>
+                    <p id="result-desc" class="text-sm text-gray-600 mb-8 leading-relaxed"></p>
+                    <button id="btn-restart" class="w-full bg-pink-500 hover:bg-pink-600 text-white font-medium py-3 rounded-lg transition-colors shadow-md">다시 진단하기</button>
+                </div>
+            </div>
         </div>
     </div>
 
-    <!-- MAIN APP SCREEN -->
-    <div id="main-screen" class="min-h-screen flex flex-col hidden">
-        <header class="bg-white/80 backdrop-blur-xl border-b h-24 flex items-center justify-between px-10 sticky top-0 z-50">
-            <div class="flex items-center gap-4">
-                <div class="w-12 h-12 bg-black rounded-2xl flex items-center justify-center text-amber-400 shadow-lg shadow-black/10">
-                    <i data-lucide="sparkles" class="w-6 h-6"></i>
-                </div>
-                <div>
-                    <h2 class="font-black uppercase italic tracking-tighter text-2xl">Executive Styling</h2>
-                    <p class="text-[10px] text-stone-400 uppercase tracking-widest font-bold">Personal Color Lab</p>
-                </div>
-            </div>
+    <script type="module">
+        // Firebase 설정 (전달해주신 값)
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDbwkCphrmNglt9wEpqm1hA257Nq9u6DvM",
+            authDomain: "visual-analysis-15610.firebaseapp.com",
+            projectId: "visual-analysis-15610",
+            storageBucket: "visual-analysis-15610.firebasestorage.app",
+            messagingSenderId: "1030724023702",
+            appId: "1:1030724023702:web:7ef935a26f8dbcba1c99b7",
+            measurementId: "G-L24XT1F4BW"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const provider = new GoogleAuthProvider();
+
+        // UI 요소
+        const loginScreen = document.getElementById('login-screen');
+        const mainScreen = document.getElementById('main-screen');
+        const loadingOverlay = document.getElementById('loading-overlay');
+        const btnGoogleLogin = document.getElementById('btn-google-login');
+        const btnLogout = document.getElementById('btn-logout');
+        const userNameSpan = document.getElementById('user-name');
+        const loginError = document.getElementById('login-error');
+
+        // 퍼스널 컬러 로직 요소
+        const quizContainer = document.getElementById('quiz-container');
+        const resultContainer = document.getElementById('result-container');
+        const qNum = document.getElementById('q-num');
+        const qTitle = document.getElementById('q-title');
+        const answerBtns = document.querySelectorAll('.answer-btn');
+        const btnRestart = document.getElementById('btn-restart');
+        
+        let currentQuestion = 0;
+        let score = { warm: 0, cool: 0, light: 0, dark: 0 };
+
+        const questions = [
+            {
+                title: "평소 잘 어울린다고 듣는 액세서리 컬러는 무엇인가요?",
+                answers: [
+                    { text: "골드 (Gold) 제품이 피부에 착 감깁니다.", type: "warm" },
+                    { text: "실버 (Silver) 제품이 얼굴을 환하게 해줍니다.", type: "cool" }
+                ]
+            },
+            {
+                title: "햇볕에 장시간 노출되었을 때 피부의 반응은?",
+                answers: [
+                    { text: "쉽게 타고 피부가 어두워지는 편입니다.", type: "warm" },
+                    { text: "피부가 붉어지고 잘 타지 않는 편입니다.", type: "cool" }
+                ]
+            },
+            {
+                title: "평소 선호하거나 잘 어울리는 옷의 명도(밝기)는?",
+                answers: [
+                    { text: "밝고 화사한 파스텔 톤이나 밝은 색상", type: "light" },
+                    { text: "깊이감 있는 어둡거나 선명한 원색 색상", type: "dark" }
+                ]
+            }
+        ];
+
+        // 인증 상태 감지
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                // 로그인 성공
+                userNameSpan.textContent = user.displayName || "학생";
+                loginScreen.classList.add('hidden');
+                mainScreen.classList.remove('hidden');
+                startQuiz();
+            } else {
+                // 로그아웃 상태
+                loginScreen.classList.remove('hidden');
+                mainScreen.classList.add('hidden');
+            }
+        });
+
+        // 구글 로그인 실행
+        btnGoogleLogin.addEventListener('click', async () => {
+            loadingOverlay.classList.remove('hidden');
+            loginError.classList.add('hidden');
+            try {
+                await signInWithPopup(auth, provider);
+            } catch (error) {
+                console.error("Login Error: ", error);
+                
+                // auth/unauthorized-domain 에러에 대한 명확한 UI 피드백 추가
+                if (error.code === 'auth/unauthorized-domain') {
+                    loginError.innerHTML = `
+                        <strong>도메인 승인 오류 발생</strong><br><br>
+                        현재 실행 중인 웹페이지 주소가 Firebase에 등록되지 않아 로그인이 차단되었습니다.<br><br>
+                        <span class="text-xs text-left block mt-2 text-gray-700 bg-white p-2 rounded border border-red-200">
+                        <strong>[해결 방법]</strong><br>
+                        1. Firebase 콘솔(console.firebase.google.com) 접속<br>
+                        2. 프로젝트(visual-analysis-15610) 선택<br>
+                        3. 왼쪽 메뉴 <strong>Authentication</strong> > <strong>설정(Settings)</strong> 탭<br>
+                        4. <strong>승인된 도메인(Authorized domains)</strong> 섹션 찾기<br>
+                        5. 현재 접속 중인 주소(예: tech10111489.github.io 또는 현재 테스트 화면의 도메인)를 추가
+                        </span>
+                    `;
+                } else {
+                    loginError.textContent = "로그인 중 오류가 발생했습니다. 팝업 차단 여부를 확인하거나 나중에 다시 시도해주세요.";
+                }
+                loginError.classList.remove('hidden');
+            } finally {
+                loadingOverlay.classList.add('hidden');
+            }
+        });
+
+        // 로그아웃 실행
+        btnLogout.addEventListener('click', async () => {
+            loadingOverlay.classList.remove('hidden');
+            await signOut(auth);
+            loadingOverlay.classList.add('hidden');
+        });
+
+        // 퀴즈 렌더링
+        function renderQuestion() {
+            const q = questions[currentQuestion];
+            qNum.textContent = currentQuestion + 1;
+            qTitle.textContent = q.title;
             
-            <div class="flex items-center gap-6">
-                <div class="flex items-center gap-4 bg-stone-50 px-6 py-3 rounded-full border border-stone-100">
-                    <img id="user-photo" src="" class="w-8 h-8 rounded-full border border-stone-200 shadow-sm">
-                    <span id="user-name" class="text-xs font-bold tracking-tight">회장님</span>
-                </div>
-                <button onclick="handleLogout()" class="text-stone-400 hover:text-black text-xs font-bold tracking-widest uppercase transition-colors">Logout</button>
-            </div>
-        </header>
+            answerBtns[0].textContent = q.answers[0].text;
+            answerBtns[0].dataset.type = q.answers[0].type;
+            
+            answerBtns[1].textContent = q.answers[1].text;
+            answerBtns[1].dataset.type = q.answers[1].type;
+        }
 
-        <main class="max-w-6xl mx-auto w-full px-8 py-16 grid grid-cols-1 lg:grid-cols-12 gap-16">
-            <div class="lg:col-span-5 space-y-10">
-                <h3 class="text-3xl font-black tracking-tighter flex items-center gap-3">
-                    <i data-lucide="camera" class="text-amber-600 w-8 h-8"></i> Visual Analysis
-                </h3>
+        // 퀴즈 답변 처리
+        answerBtns.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const type = e.target.dataset.type;
+                score[type]++;
                 
-                <div id="upload-area" class="aspect-[4/5] border-2 border-dashed border-stone-200 rounded-[3.5rem] bg-white flex flex-col items-center justify-center cursor-pointer hover:border-amber-500 hover:shadow-2xl hover:shadow-amber-900/10 transition-all duration-700 overflow-hidden relative group">
-                    <img id="preview-img" class="w-full h-full object-cover hidden group-hover:scale-105 transition-transform duration-700">
-                    <div class="upload-placeholder text-center p-12 text-stone-300 space-y-4">
-                        <i data-lucide="camera" class="w-16 h-16 mx-auto opacity-20 group-hover:scale-110 transition-transform"></i>
-                        <p class="font-black text-xl text-stone-400">사진 데이터 업로드</p>
-                    </div>
-                    <input type="file" id="file-input" class="hidden" accept="image/*">
-                </div>
-                
-                <button id="analyze-btn" onclick="startAnalysis()" class="hidden w-full bg-black text-white py-7 rounded-[2.5rem] font-black text-2xl shadow-2xl hover:bg-stone-800 transition-all active:scale-95">
-                    AI 진단 리포트 생성
-                </button>
-            </div>
+                currentQuestion++;
+                if (currentQuestion < questions.length) {
+                    renderQuestion();
+                } else {
+                    showResult();
+                }
+            });
+        });
 
-            <div class="lg:col-span-7">
-                <div id="empty-state" class="h-full min-h-[500px] border-2 border-dashed rounded-[3.5rem] flex flex-col items-center justify-center text-stone-200 font-bold bg-white/50 space-y-4 shadow-sm border-stone-100">
-                    <i data-lucide="palette" class="w-20 h-20 opacity-10"></i>
-                    <p class="text-xl italic">데이터 수집 대기 중</p>
-                </div>
-                
-                <div id="loading-state" class="h-full min-h-[500px] bg-white rounded-[3.5rem] flex flex-col items-center justify-center hidden shadow-2xl animate-pulse">
-                    <div class="w-24 h-24 border-8 border-stone-50 border-t-amber-500 rounded-full animate-spin mb-8 shadow-inner"></div>
-                    <p class="font-black text-stone-800 text-2xl italic tracking-tighter uppercase tracking-widest">Processing...</p>
-                </div>
+        // 결과 표시
+        function showResult() {
+            quizContainer.classList.add('hidden');
+            resultContainer.classList.remove('hidden');
+            
+            let resultTone = "";
+            let colorHex = "";
+            let description = "";
 
-                <div id="result-area" class="hidden space-y-10 animate-in slide-in-from-right-12 duration-1000">
-                    <div class="bg-black text-white p-14 rounded-[4.5rem] shadow-2xl relative overflow-hidden border border-white/10 group">
-                        <div class="absolute top-0 right-0 w-96 h-96 bg-amber-400/10 blur-[120px] rounded-full -translate-y-40 translate-x-40 group-hover:scale-110 transition-transform duration-1000"></div>
-                        <div class="relative z-10 space-y-4">
-                            <span class="text-[11px] font-black tracking-[0.6em] uppercase text-amber-500 opacity-80">Final Result</span>
-                            <h4 id="res-season" class="text-7xl font-black italic tracking-tighter">진단 완료</h4>
-                            <p id="res-summary" class="text-stone-400 text-2xl font-light leading-relaxed"></p>
-                        </div>
-                    </div>
+            if (score.warm > score.cool) {
+                if (score.light > score.dark) {
+                    resultTone = "봄 웜톤 (Spring Warm)";
+                    colorHex = "#FDE68A"; // 피치/옐로우 톤
+                    description = "생기 있고 발랄한 이미지입니다. 코랄, 피치, 카멜 색상이 얼굴을 환하게 밝혀줍니다. 명도가 높고 채도가 높은 맑은 색상이 잘 어울립니다.";
+                } else {
+                    resultTone = "가을 웜톤 (Autumn Warm)";
+                    colorHex = "#D97706"; // 브라운/카키 톤
+                    description = "고급스럽고 차분한 이미지입니다. 카키, 브라운, 머스타드 색상이 깊이감을 더해줍니다. 차분하고 음영이 들어간 색상이 잘 어울립니다.";
+                }
+            } else {
+                if (score.light > score.dark) {
+                    resultTone = "여름 쿨톤 (Summer Cool)";
+                    colorHex = "#A7F3D0"; // 라벤더/민트 톤
+                    description = "청량하고 맑은 이미지입니다. 파스텔 핑크, 라벤더, 스카이블루 색상이 우아함을 더해줍니다. 대비가 강하지 않은 은은한 색상이 잘 어울립니다.";
+                } else {
+                    resultTone = "겨울 쿨톤 (Winter Cool)";
+                    colorHex = "#1E3A8A"; // 딥블루/블랙 톤
+                    description = "세련되고 도시적인 이미지입니다. 블랙, 화이트, 딥 버건디 등 대비가 확실한 색상이 이목구비를 뚜렷하게 해줍니다.";
+                }
+            }
 
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        <div class="bg-white p-10 rounded-[3.5rem] shadow-sm border border-stone-100 space-y-8">
-                            <h5 class="font-black text-[12px] uppercase tracking-[0.4em] text-stone-400 flex items-center gap-3">
-                                <i data-lucide="check-circle" class="text-emerald-500 w-5 h-5"></i> Best Palette
-                            </h5>
-                            <div id="best-palette" class="flex flex-wrap gap-5"></div>
-                        </div>
-                        <div class="bg-white p-10 rounded-[3.5rem] shadow-sm border border-stone-100 space-y-8">
-                            <h5 class="font-black text-[12px] uppercase tracking-[0.4em] text-stone-400 flex items-center gap-3">
-                                <i data-lucide="x-circle" class="text-rose-500 w-5 h-5"></i> Avoid Palette
-                            </h5>
-                            <div id="worst-palette" class="flex flex-wrap gap-5"></div>
-                        </div>
-                    </div>
+            document.getElementById('result-title').textContent = resultTone;
+            document.getElementById('result-desc').textContent = description;
+            document.getElementById('result-color-box').style.backgroundColor = colorHex;
+        }
 
-                    <div class="bg-white p-14 rounded-[4.5rem] shadow-sm border border-stone-100 space-y-12">
-                        <h5 class="text-3xl font-black italic tracking-tighter flex items-center gap-4 border-b border-stone-50 pb-8 uppercase">
-                            <i data-lucide="shirt" class="text-amber-600 w-8 h-8"></i> Styling Strategy
-                        </h5>
-                        <div id="advice-list" class="space-y-6"></div>
-                    </div>
-                </div>
-            </div>
-        </main>
+        // 퀴즈 초기화
+        function startQuiz() {
+            currentQuestion = 0;
+            score = { warm: 0, cool: 0, light: 0, dark: 0 };
+            quizContainer.classList.remove('hidden');
+            resultContainer.classList.add('hidden');
+            renderQuestion();
+        }
 
-        <footer class="mt-auto py-20 text-center bg-white border-t border-stone-50">
-            <p class="text-stone-300 text-[11px] tracking-[0.8em] font-black uppercase mb-2">Chief of Staff Secretary Office Platform</p>
-        </footer>
-    </div>
+        btnRestart.addEventListener('click', startQuiz);
+
+    </script>
 </body>
 </html>
